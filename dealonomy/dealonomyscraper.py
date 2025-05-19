@@ -24,19 +24,7 @@ formatter = jsonlogger.JsonFormatter()
 logHandler.setFormatter(formatter)
 logger.addHandler(logHandler)
 
-settings = {
-    "max_tcp_connections": 1,
-    "proxies": [
-        "http://localhost:8765",
-    ],
-    "rate_per_host": {
-        'www.dealonomy.com': {
-            "limit": 10,  # Rate limiting for Dealonomy
-        },
-    }
-}
-
-def runRequest(url, settings, scraperapi=False):
+def runRequest(url, scraperapi=False):
     if (scraperapi):
         start_time = time.perf_counter()
         payload = { 'api_key': '5a4fe9277d64dee6d98516137342135c', 'url': url }
@@ -46,9 +34,6 @@ def runRequest(url, settings, scraperapi=False):
         status = response.status_code
         return(response, status, elapsed_time)
     else:
-        host = urlparse(url).hostname
-        max_tcp_connections = settings['max_tcp_connections']
-
         safari_agents = [
             'Safari/17612.3.14.1.6 CFNetwork/1327.0.4 Darwin/21.2.0',
         ]
@@ -66,11 +51,11 @@ def runRequest(url, settings, scraperapi=False):
         status = response.status_code
         return(response, status, elapsed_time)
 
-def dispatch(url, state, settings, filepath):
-    response, status, elapsed_time = runRequest(url, settings)
+def dispatch(url, state, filepath):
+    response, status, elapsed_time = runRequest(url)
 
     if status != 200:
-        dispatch(url, state, filepath, settings)
+        dispatch(url, state, filepath)
     else:
         logger.info(
             msg=f"status={status}, url={url}",
@@ -87,14 +72,14 @@ def dispatch(url, state, settings, filepath):
         with open(loc, mode="w", encoding="utf-8") as fd:
             fd.write(response.text)
 
-def main(state, settings, filepath):
+def main(state, filepath):
     start_urls = []
     i = 1
     stop = False
     
     # Initial request to get total pages
     base_url = f"https://www.dealonomy.com/s?states={state}"
-    response, status, elapsed_time = runRequest(base_url, settings)
+    response, status, elapsed_time = runRequest(base_url)
     soup = BeautifulSoup(response.text, 'html.parser')
     
     # Find total number of pages (this selector might need adjustment based on actual HTML structure)
@@ -107,7 +92,7 @@ def main(state, settings, filepath):
     while not stop:
         url = f"{base_url}&page={i}"
         start_urls.append(url)
-        dispatch(url, state, settings, filepath)
+        dispatch(url, state, filepath)
 
         if i == page_count:
             stop = True
@@ -190,11 +175,11 @@ def get_data(combined_list, state):
     df = pd.DataFrame(data)
     return df
 
-def scrape_dealonomy(state, settings, filepath, run_scrape):
+def scrape_dealonomy(state, filepath, run_scrape):
     if run_scrape:
         state = state.replace(' ', '-')
         state = state.title()
-        main(state, settings, filepath)
+        main(state, filepath)
     
     list_of_filepaths = os.listdir(f'./{filepath}')
     try:
@@ -211,5 +196,5 @@ if __name__ == "__main__":
     # Example usage
     state = "Texas"
     run_scrape = True
-    final_df = scrape_dealonomy(state, settings, 'dealonomy-listings', run_scrape)
+    final_df = scrape_dealonomy(state, 'dealonomy-listings', run_scrape)
     final_df.to_csv(f"dealonomy_{state.lower()}_listings.csv", index=False) 

@@ -25,7 +25,10 @@ import openai
 import re
 
 
-openai_key = "" #INSERT OPENAI KEY HERE
+openai_key = "your_openai_api_key_here"  # Required for ChatGPT analysis
+scraperapi_key = "your_scraperapi_key_here"  # Required for web scraping
+
+
 client = openai.OpenAI(api_key=openai_key)
 
 
@@ -40,7 +43,7 @@ logger.addHandler(logHandler)
 def runRequest(url, scraperapi=False):
     if (scraperapi):
         start_time = time.perf_counter()
-        payload = { 'api_key': '5a4fe9277d64dee6d98516137342135c', 'url': url }
+        payload = { 'api_key': scarperapi_key, 'url': url }
         response = requests.get('https://api.scraperapi.com/', params=payload)
         end_time = time.perf_counter()
         elapsed_time = end_time - start_time

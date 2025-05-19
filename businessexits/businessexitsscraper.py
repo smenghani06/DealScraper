@@ -26,18 +26,6 @@ formatter = jsonlogger.JsonFormatter()
 logHandler.setFormatter(formatter)
 logger.addHandler(logHandler)
 
-settings = {
-    "max_tcp_connections": 1,
-    "proxies": [
-        "http://localhost:8765",
-    ],
-    "rate_per_host": {
-        'businessexits.com': {
-            "limit": 10,  # Rate limiting for Business Exits
-        },
-    }
-}
-
 def get_region_from_state(state, openai_key):
     """Convert state to region using OpenAI"""
     if state != "all":
@@ -63,7 +51,7 @@ def get_region_from_state(state, openai_key):
     else:
         return "all"
 
-def runRequest(url, settings, scraperapi=False):
+def runRequest(url, scraperapi=False):
     if scraperapi:
         start_time = time.perf_counter()
         payload = {'api_key': '5a4fe9277d64dee6d98516137342135c', 'url': url}
@@ -73,9 +61,6 @@ def runRequest(url, settings, scraperapi=False):
         status = response.status_code
         return(response, status, elapsed_time)
     else:
-        host = urlparse(url).hostname
-        max_tcp_connections = settings['max_tcp_connections']
-
         safari_agents = [
             'Safari/17612.3.14.1.6 CFNetwork/1327.0.4 Darwin/21.2.0',
         ]
@@ -93,11 +78,11 @@ def runRequest(url, settings, scraperapi=False):
         status = response.status_code
         return(response, status, elapsed_time)
 
-def dispatch(url, region, settings, filepath, page=1):
-    response, status, elapsed_time = runRequest(url, settings)
+def dispatch(url, region, filepath, page=1):
+    response, status, elapsed_time = runRequest(url)
 
     if status != 200:
-        return dispatch(url, region, settings, filepath, page)
+        return dispatch(url, region, filepath, page)
     else:
         logger.info(
             msg=f"status={status}, url={url}",
@@ -131,7 +116,7 @@ def has_next_page(filepath, current_page):
             return True
     return False
 
-def main(region, settings, filepath):
+def main(region, filepath):
     start_urls = []
     page = 1
     all_filenames = []
@@ -149,7 +134,7 @@ def main(region, settings, filepath):
                 url = f"https://businessexits.com/listings/?region={region}&wpv_paged={page}&wpv_aux_current_post_id=13887&wpv_aux_parent_post_id=13887&wpv_sort_orderby=field-sorting_price&wpv_sort_order=desc&wpv_sort_orderby_as=numeric&wpv_view_count=14338"
 
         start_urls.append(url)
-        filename = dispatch(url, region, settings, filepath, page)
+        filename = dispatch(url, region, filepath, page)
         all_filenames.append(filename)
 
         # Check if there is a next page link
@@ -258,10 +243,10 @@ def get_data(combined_list, region):
     df = pd.DataFrame(data)
     return df
 
-def scrape_businessexits(state, settings, filepath, run_scrape, openai_key):
+def scrape_businessexits(state, filepath, run_scrape, openai_key):
     if run_scrape:
         region = get_region_from_state(state, openai_key)
-        all_filenames = main(region, settings, filepath)
+        all_filenames = main(region, filepath)
     else:
         region = get_region_from_state(state, openai_key)
         all_filenames = [f for f in os.listdir(f'./{filepath}') if f.startswith(f'businessexits-{region}') or (region == 'all' and f.startswith('businessexits-all'))]
@@ -380,7 +365,7 @@ if __name__ == "__main__":
     state = "all"
     openai_key = "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"
     run_scrape = True
-    final_df = scrape_businessexits(state, settings, 'businessexits-listings', run_scrape, openai_key)
+    final_df = scrape_businessexits(state, 'businessexits-listings', run_scrape, openai_key)
     final_df.to_csv(f"businessexits_{state.lower()}_listings.csv", index=False) 
 
 
