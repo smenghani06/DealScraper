@@ -1,0 +1,6 @@
+beautifulsoup4
+openai
+pandas
+python-json-logger
+requests
+numpy
